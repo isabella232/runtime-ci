@@ -1,13 +1,24 @@
 #!/bin/bash
+SEMVER_SEGMENT="patch"
 
 set -exu
 
-git clone cf-deployment-develop updated-cf-deployment-manifest
+# git clone cf-deployment-release-candidate updated-cf-deployment-manifest
+pushd ~/workspace/cf-deployment
+  git co staylor-delete-me
+popd
+git clone ~/workspace/cf-deployment updated-cf-deployment-manifest
 pushd updated-cf-deployment-manifest
-  go run bump_manifest_version.go ${SEMVER_FIELD}
+  go run ../main.go "--${SEMVER_SEGMENT}" --manifest cf-deployment.yml
 
   git add cf-deployment.yml
   git config user.email "cf-release-integration@pivotal.io"
   git config user.name  "CI (automated)"
-  git commit -m "Bump cf-deployment manifest's ${SEMVER_FIELD} version"
+  git commit -m "Bump cf-deployment manifest's ${SEMVER_SEGMENT} version"
+popd
+
+git clone updated-cf-deployment-manifest updated-cf-deployment-manifest-develop
+pushd updated-cf-deployment-manifest-develop
+  git checkout develop
+  git merge staylor-delete-me
 popd

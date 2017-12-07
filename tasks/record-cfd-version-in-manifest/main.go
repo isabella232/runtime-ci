@@ -13,13 +13,17 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-var majorPtr = flag.Bool("major", false, "Causes a major version bump in `manifest_version`")
-var minorPtr = flag.Bool("minor", false, "Causes a minor version bump in `manifest_version`")
-var patchPtr = flag.Bool("patch", false, "Causes a patch version bump in `manifest_version")
+var majorPtr = flag.Bool("major", false, "Causes a major version bump in 'manifest_version'")
+var minorPtr = flag.Bool("minor", false, "Causes a minor version bump in 'manifest_version'")
+var patchPtr = flag.Bool("patch", false, "Causes a patch version bump in 'manifest_version'")
+var manifestPtr = flag.String("manifest", "", "CFD manifest whose version needs updating")
 
 func main() {
-	// TODO: Maybe make input and output file names variable?
 	flag.Parse()
+
+	if _, err := os.Stat(*manifestPtr); os.IsNotExist(err) {
+		log.Fatal(err, "\n[ Failed to find manifest at: ( "+*manifestPtr+" )]")
+	}
 
 	// Grab the current value of the `manifest_version` using `bosh interpolate`
 	manifestVersionBytes, err := boshExtract("cf-deployment.yml", "/manifest_version")
