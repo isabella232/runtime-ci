@@ -96,6 +96,7 @@ groups:
 - name: st
   jobs:
   - stable-acquire-pool
+  - stable-acquire-pool-cats-develop
   - stable-deploy
   - stable-smoke-tests
   - stable-semihourly-pool-acquisition
@@ -327,6 +328,12 @@ resources:
     branch: master
     uri: git@github.com:cloudfoundry/cf-deployment.git
     private_key: ((cf_deployment_readwrite_deploy_key.private_key))
+- name: cf-acceptance-tests-develop
+  type: git
+  source:
+    branch: develop
+    uri: git@github.com:cloudfoundry/cf-acceptance-tests.git
+    private_key: ((cf_acceptance_tests_readwrite_deploy_key.private_key))
 - name: snitch-env-integration-configs
   type: git
   source:
@@ -695,6 +702,16 @@ jobs:
   plan:
   - aggregate:
     - get: cf-deployment-master
+      trigger: true
+    - put: stable-pool
+      params: {acquire: true}
+
+- name: stable-acquire-pool-cats-develop
+  public: true
+  serial: true
+  plan:
+  - aggregate:
+    - get: cf-acceptance-tests-develop
       trigger: true
     - put: stable-pool
       params: {acquire: true}
@@ -1153,6 +1170,44 @@ jobs:
       params: {claim: bellatrix}
 
 - name: stable-periodic-cats
+  serial: true
+  public: true
+  build_logs_to_retain: 2000
+  plan:
+  - timeout: 4h
+    on_failure:
+      put: stable-pool
+      params: {release: stable-pool}
+    do:
+    - get: stable-pool
+      trigger: true
+      passed: [ stable-semihourly-pool-acquisition ]
+    - aggregate:
+      - get: cf-deployment-concourse-tasks
+      - get: cf-acceptance-tests
+        passed: [ unit-test-cats ]
+      - get: bellatrix-env-integration-configs
+      - get: bellatrix-env-director-state
+      - get: cf-deployment-master
+        passed: [ stable-deploy ]
+    - task: enable-docker-and-tasks
+      file: cf-deployment-concourse-tasks/credhub-compatible/set-feature-flags/task.yml
+      input_mapping:
+        bbl-state: bellatrix-env-director-state
+      params:
+        SYSTEM_DOMAIN: bellatrix.cf-app.com
+        ENABLED_FEATURE_FLAGS: |
+          diego_docker
+          task_creation
+          service_instance_sharing
+    - task: run-cats
+      input_mapping:
+        integration-config: bellatrix-env-integration-configs
+      file: cf-deployment-concourse-tasks/run-cats/task.yml
+      params:
+        FLAKE_ATTEMPTS: 0
+
+- name: stable-cats-develop
   serial: true
   public: true
   build_logs_to_retain: 2000
