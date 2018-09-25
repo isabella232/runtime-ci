@@ -107,7 +107,7 @@ opsReleases:
 
 windowsVersSupported:
 - name: windows2012R2
-  opsFile: windows-cell.yml
+  opsFile: windows2012R2-stemcell.yml
   opsFileDir: operations
 - name: windows2016
   opsFile: windows2016-cell.yml
